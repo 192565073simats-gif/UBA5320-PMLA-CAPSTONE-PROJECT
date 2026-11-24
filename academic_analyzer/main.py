@@ -6,6 +6,7 @@ Run with:
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -63,27 +64,27 @@ async def lifespan(app: FastAPI):
 
 
 def _seed_admin() -> None:
-    """Create a default admin account if none exists."""
+    """Create the configured admin account if one does not already exist."""
     from academic_analyzer.models import User  # noqa: PLC0415
 
+    admin_username = os.getenv("ADMIN_USERNAME", "admin")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
     db = next(get_db())
     try:
         existing = db.query(User).filter(User.is_admin == True).first()  # noqa: E712
         if existing is None:
             admin = User(
-                username="admin",
+                username=admin_username,
                 email="admin@academic-analyzer.local",
-                hashed_password=get_password_hash("admin123"),
+                hashed_password=get_password_hash(admin_password),
                 is_active=True,
                 is_admin=True,
             )
             db.add(admin)
             db.commit()
-            logger.info("Default admin user created  (username=admin  password=admin123)")
+            logger.info("Admin user created (username=%s).", admin_username)
         else:
-            existing.hashed_password = get_password_hash("admin123")
-            db.commit()
-            logger.info("Admin password refreshed to default (admin123).")
+            logger.info("Existing admin user retained.")
     except Exception as exc:
         db.rollback()
         logger.error("Failed to seed admin user: %s", exc)

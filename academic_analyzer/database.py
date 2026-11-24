@@ -2,6 +2,8 @@
 database.py — SQLAlchemy engine, session factory, declarative base, and helpers.
 """
 
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from typing import Generator
@@ -9,11 +11,15 @@ from typing import Generator
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
-DATABASE_URL = "sqlite:///./academic_analyzer.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./academic_analyzer.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite:") else {}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # required for SQLite
+    connect_args=connect_args,
     echo=False,
 )
 

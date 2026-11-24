@@ -2,6 +2,7 @@
 auth.py — JWT authentication helpers and FastAPI security dependencies.
 """
 
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -17,7 +18,7 @@ from academic_analyzer.schemas import TokenData
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-SECRET_KEY = "academic-analyzer-secret-key-2024-capstone-project"
+SECRET_KEY = os.getenv("SECRET_KEY", "academic-analyzer-local-development-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
 
