@@ -1,0 +1,8 @@
+subject_code,subject_name,department,max_marks,min_marks
+CS301,Data Structures,Computer Science,100,0
+CS302,Design and Analysis of Algorithms,Computer Science,100,0
+CS303,Database Management Systems,Computer Science,100,0
+CS304,Operating Systems,Computer Science,100,0
+CS305,Computer Networks,Computer Science,100,0
+EC301,Digital Electronics,Electronics,100,0
+ME301,Engineering Mechanics,Mechanical,100,0

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Reports — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-file-alt me-2 text-primary-custom"></i>Reports</h4>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="chart-card text-center py-4">
+      <i class="fas fa-user-graduate fa-3x mb-3" style="color:var(--primary)"></i>
+      <h5>Student Report</h5>
+      <p class="text-muted small">Generate a detailed performance report for an individual student.</p>
+      <div class="mb-3">
+        <select id="report-student" class="form-select mx-auto" style="max-width:300px"></select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="downloadStudentCSV()"><i class="fas fa-file-csv me-1"></i>Download CSV</button>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="chart-card text-center py-4">
+      <i class="fas fa-users fa-3x mb-3" style="color:var(--primary)"></i>
+      <h5>Class Report</h5>
+      <p class="text-muted small">Generate a class-wide statistical performance report.</p>
+      <div class="mb-3">
+        <select id="report-subject" class="form-select mx-auto" style="max-width:300px"></select>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="downloadClassCSV()"><i class="fas fa-file-csv me-1"></i>Download CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- Previous Reports -->
+<div class="table-card mt-4">
+  <div class="table-header"><span>Generated Reports</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody id="reports-tbody"><tr><td colspan="5" class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadReportPage() {
+  try {
+    const students = await apiFetch('/api/students/');
+    document.getElementById('report-student').innerHTML = students.map(s => `<option value="${s.id}">${s.student_id} — ${s.name}</option>`).join('');
+  } catch(e) {}
+  await populateSubjectDropdown('report-subject', true);
+
+  try {
+    const reports = await apiFetch('/api/reports/');
+    const tbody = document.getElementById('reports-tbody');
+    if (!reports.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No reports generated yet.</td></tr>'; return; }
+    tbody.innerHTML = reports.map((r, i) => `
+      <tr>
+        <td>${i+1}</td><td>${r.report_name}</td><td><span class="badge bg-primary">${r.report_type}</span></td>
+        <td class="small text-muted">${new Date(r.created_at).toLocaleDateString()}</td>
+        <td><button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="confirmDelete('/api/reports/${r.id}', loadReportPage)"><i class="fas fa-trash"></i></button></td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('reports-tbody').innerHTML = '<tr><td colspan="5" class="text-muted text-center py-3">Could not load reports.</td></tr>';
+  }
+}
+
+async function downloadStudentCSV() {
+  const id = document.getElementById('report-student').value;
+  if (!id) { showMessage('Select a student.','warning'); return; }
+  try {
+    const data = await apiFetch(`/api/analysis/student/${id}`);
+    // Build CSV from data
+    let csv = 'Subject,Marks,Average\n';
+    (data.subjects || []).forEach(s => {
+      s.marks.forEach(m => { csv += `"${s.subject_name}",${m},${s.average}\n`; });
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `student_${data.student_id}_report.csv`; a.click();
+    showMessage('Student report downloaded.','success');
+  } catch(e) { showMessage(e.message,'danger'); }
+}
+
+async function downloadClassCSV() {
+  try {
+    const marks = await apiFetch('/api/marks/?limit=5000');
+    let csv = 'Student ID,Subject ID,Type,Marks,Missing\n';
+    marks.forEach(m => { csv += `${m.student_id},${m.subject_id},${m.assessment_type},${m.marks ?? ''},${m.is_missing}\n`; });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'class_report.csv'; a.click();
+    showMessage('Class report downloaded.','success');
+  } catch(e) { showMessage(e.message,'danger'); }
+}
+
+loadReportPage();
+</script>
+{% endblock %}

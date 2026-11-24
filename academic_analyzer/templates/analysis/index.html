@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Statistical Analysis — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-chart-bar me-2 text-primary-custom"></i>Statistical Analysis</h4>
+</div>
+
+<!-- Controls -->
+<div class="form-card mb-4">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label mb-1">Subject</label>
+      <select id="subject-select" class="form-select"></select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Assessment Type</label>
+      <select id="type-select" class="form-select">
+        <option value="">All</option><option value="internal">Internal</option><option value="exam">Exam</option>
+      </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="runAnalysis()"><i class="fas fa-calculator me-1"></i>Analyze</button></div>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="results-section" class="d-none">
+  <!-- Descriptive Stats Cards -->
+  <h5 class="section-title">Descriptive Statistics</h5>
+  <div class="row g-3 mb-4" id="stats-cards"></div>
+
+  <!-- Normality Test -->
+  <div class="form-card mb-4" id="normality-section">
+    <h6 class="section-title">Distribution Analysis</h6>
+    <div id="normality-info"></div>
+  </div>
+
+  <!-- Interpretation -->
+  <div class="form-card mb-4">
+    <h6 class="section-title">Interpretation</h6>
+    <p id="interpretation-text" class="mb-0 text-muted"></p>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="chart-card"><div class="chart-title"><i class="fas fa-chart-area"></i> Histogram</div><div id="chart-hist" style="min-height:300px"></div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="chart-card"><div class="chart-title"><i class="fas fa-wave-square"></i> Box Plot</div><div id="chart-box" style="min-height:300px"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="no-data" class="text-center text-muted py-5">
+  <i class="fas fa-chart-pie fa-3x mb-3 text-primary-custom"></i>
+  <p>Select a subject and click <strong>Analyze</strong> to view statistical analysis.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+populateSubjectDropdown('subject-select', false);
+
+async function runAnalysis() {
+  const subjectId = document.getElementById('subject-select').value;
+  const aType = document.getElementById('type-select').value;
+  if (!subjectId) { showMessage('Please select a subject.','warning'); return; }
+
+  showLoading();
+  try {
+    let url = `/api/analysis/subject/${subjectId}`;
+    if (aType) url += `?assessment_type=${aType}`;
+    const data = await apiFetch(url);
+    hideLoading();
+    displayResults(data);
+  } catch(e) {
+    hideLoading();
+    showMessage(e.message, 'danger');
+  }
+}
+
+function displayResults(data) {
+  document.getElementById('no-data').classList.add('d-none');
+  document.getElementById('results-section').classList.remove('d-none');
+
+  const s = data.stats;
+  const cards = [
+    {label:'Mean', value: fmt(s.mean), icon:'fa-chart-line', color:''},
+    {label:'Median', value: fmt(s.median), icon:'fa-sort-numeric-up', color:''},
+    {label:'Mode', value: fmt(s.mode), icon:'fa-bullseye', color:''},
+    {label:'Min', value: fmt(s.min_val), icon:'fa-arrow-down', color:'red'},
+    {label:'Max', value: fmt(s.max_val), icon:'fa-arrow-up', color:'green'},
+    {label:'Range', value: fmt(s.range_val), icon:'fa-arrows-alt-h', color:''},
+    {label:'Variance', value: fmt(s.variance), icon:'fa-expand-arrows-alt', color:'orange'},
+    {label:'Std Dev', value: fmt(s.std_dev), icon:'fa-wave-square', color:'orange'},
+  ];
+  document.getElementById('stats-cards').innerHTML = cards.map(c => `
+    <div class="col-6 col-md-3">
+      <div class="stat-card ${c.color}">
+        <div class="d-flex align-items-start gap-3">
+          <div class="stat-icon"><i class="fas ${c.icon}"></i></div>
+          <div><div class="stat-value" style="font-size:1.3rem">${c.value}</div><div class="stat-label">${c.label}</div></div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // Normality
+  const nf = data.normal_fit || {};
+  const badge = nf.fits_normal ? '<span class="badge bg-success">Normal</span>' : '<span class="badge bg-warning text-dark">Non-Normal</span>';
+  document.getElementById('normality-info').innerHTML = `
+    <div class="d-flex align-items-center gap-3 mb-2">${badge} <span class="text-muted small">p-value: ${nf.p_value ?? 'N/A'}</span></div>
+    <p class="mb-1"><strong>Distribution Type:</strong> ${data.distribution_type}</p>
+    <p class="mb-0"><strong>Fit Parameters:</strong> μ = ${nf.mu ?? 'N/A'}, σ = ${nf.sigma ?? 'N/A'}</p>`;
+
+  document.getElementById('interpretation-text').textContent = data.interpretation;
+
+  // Histogram (from API marks)
+  if (s.mean !== null && s.std_dev !== null) {
+    // Build a simple histogram from the stats
+    Plotly.newPlot('chart-hist', [{
+      x: Array.from({length: 10}, (_, i) => s.min_val + (s.range_val/10)*i + s.range_val/20),
+      type: 'bar',
+      marker: {color: '#1a73e8'},
+      name: 'Frequency'
+    }], {
+      title: data.subject_name + ' — Marks Distribution',
+      xaxis: {title: 'Marks'}, yaxis: {title: 'Count'},
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: {t:40, r:20, b:50, l:50}
+    }, {responsive: true, displaylogo: false});
+  }
+
+  // Box plot
+  Plotly.newPlot('chart-box', [{
+    y: [s.min_val, s.min_val+(s.range_val*0.25), s.median, s.median+(s.range_val*0.25), s.max_val],
+    type: 'box', name: data.subject_name,
+    marker: {color: '#1a73e8'}, boxpoints: false,
+  }], {
+    title: 'Box Plot — ' + data.subject_name,
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: {t:40, r:20, b:50, l:50}
+  }, {responsive: true, displaylogo: false});
+}
+</script>
+{% endblock %}

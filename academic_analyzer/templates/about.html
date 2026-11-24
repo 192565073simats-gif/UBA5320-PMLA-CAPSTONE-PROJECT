@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}About — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-info-circle me-2 text-primary-custom"></i>About This Project</h4>
+</div>
+
+<div class="form-card mb-4">
+  <h5 class="text-primary mb-3">Statistical Analysis of Student Academic Performance Using Probability Distributions</h5>
+  <p class="text-muted">
+    This application analyzes student academic marks using statistical methods and probability distributions
+    to help educators understand academic performance, identify students who may need additional academic support,
+    and generate meaningful statistical reports.
+  </p>
+</div>
+
+<h5 class="section-title">Technology Stack</h5>
+<div class="row g-3 mb-4">
+  {% set techs = [
+    ('Python', 'fab fa-python', 'Main programming language'),
+    ('FastAPI', 'fas fa-bolt', 'Backend web framework'),
+    ('SQLite', 'fas fa-database', 'Relational database'),
+    ('SQLAlchemy', 'fas fa-layer-group', 'ORM for database management'),
+    ('Pandas', 'fas fa-table', 'Data processing and manipulation'),
+    ('NumPy', 'fas fa-square-root-variable', 'Numerical computations'),
+    ('SciPy', 'fas fa-flask', 'Statistical calculations and distributions'),
+    ('Plotly', 'fas fa-chart-bar', 'Interactive data visualization'),
+    ('Bootstrap 5', 'fab fa-bootstrap', 'Responsive UI framework'),
+    ('Jinja2', 'fas fa-code', 'HTML templating engine'),
+  ] %}
+  {% for name, icon, desc in techs %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <div class="stat-card text-center py-3">
+      <i class="{{ icon }} fa-2x mb-2" style="color:var(--primary)"></i>
+      <div class="fw-bold">{{ name }}</div>
+      <small class="text-muted">{{ desc }}</small>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h5 class="section-title">Project Modules</h5>
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="fas fa-database"></i> Module 1: Data Collection</div>
+      <ul class="small text-muted">
+        <li>Student and subject management</li>
+        <li>Marks entry and CSV/Excel upload</li>
+        <li>Data validation and duplicate detection</li>
+        <li>Missing value handling</li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="fas fa-calculator"></i> Module 2: Statistical Analysis</div>
+      <ul class="small text-muted">
+        <li>Descriptive statistics (Mean, Median, Mode, Variance, SD)</li>
+        <li>Normal distribution fitting and testing</li>
+        <li>Binomial pass/fail analysis</li>
+        <li>Interactive Plotly visualizations</li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="chart-card h-100">
+      <div class="chart-title"><i class="fas fa-star"></i> Module 3: Performance Evaluation</div>
+      <ul class="small text-muted">
+        <li>Student performance categorization</li>
+        <li>At-risk student identification (z-score based)</li>
+        <li>Subject-wise comparison and ranking</li>
+        <li>PDF and CSV report generation</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h5 class="section-title">Statistical Methods</h5>
+<div class="form-card">
+  <div class="row">
+    <div class="col-md-6">
+      <h6 class="fw-bold">Descriptive Statistics</h6>
+      <ul class="small text-muted">
+        <li><strong>Mean</strong> — Average student marks</li>
+        <li><strong>Median</strong> — Middle value of arranged marks</li>
+        <li><strong>Mode</strong> — Most frequently occurring mark</li>
+        <li><strong>Range</strong> — Difference between highest and lowest</li>
+        <li><strong>Variance</strong> — Measure of data variation</li>
+        <li><strong>Standard Deviation</strong> — Spread from the mean</li>
+        <li><strong>Skewness & Kurtosis</strong> — Shape of the distribution</li>
+      </ul>
+    </div>
+    <div class="col-md-6">
+      <h6 class="fw-bold">Probability Distributions</h6>
+      <ul class="small text-muted">
+        <li><strong>Normality Testing</strong> — Shapiro-Wilk / D'Agostino-Pearson</li>
+        <li><strong>Normal Distribution Fitting</strong> — MLE parameter estimation</li>
+        <li><strong>Binomial Distribution</strong> — Pass/Fail probability model</li>
+        <li><strong>Z-Score Analysis</strong> — Relative standing of students</li>
+        <li><strong>IQR Outlier Detection</strong> — Identify unusual values</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Performance Evaluation — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-star me-2 text-primary-custom"></i>Performance Evaluation</h4>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4" id="perf-summary-cards">
+  <div class="col-6 col-md-3"><div class="stat-card green"><div class="stat-value" id="perf-excellent">—</div><div class="stat-label">Excellent</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-value" id="perf-good">—</div><div class="stat-label">Good</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card orange"><div class="stat-value" id="perf-average">—</div><div class="stat-label">Average</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card red"><div class="stat-value" id="perf-below">—</div><div class="stat-label">Below Average</div></div></div>
+</div>
+
+<!-- Subject Comparison -->
+<div class="table-card mb-4">
+  <div class="table-header"><span><i class="fas fa-trophy me-2"></i>Subject Rankings by Average</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Rank</th><th>Subject</th><th>Average Marks</th></tr></thead>
+      <tbody id="subject-ranking"><tr><td colspan="3" class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- At-Risk Students -->
+<div class="at-risk-banner">
+  <i class="fas fa-exclamation-triangle me-1"></i>
+  <strong>For Teacher Review:</strong> The following students may benefit from additional academic support. This is based on statistical z-score analysis and is provided as an indicator for review only.
+</div>
+<div class="table-card">
+  <div class="table-header"><span><i class="fas fa-user-clock me-2 text-warning"></i>Students Flagged for Review</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Student ID</th><th>Name</th><th>Department</th><th>Avg Marks</th><th>Category</th></tr></thead>
+      <tbody id="at-risk-tbody"><tr><td colspan="5" class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadPerformance() {
+  try {
+    const summary = await apiFetch('/api/dashboard/summary');
+    // Load subject rankings
+    const subjects = summary.top_subjects_by_avg || [];
+    const tbody = document.getElementById('subject-ranking');
+    if (subjects.length) {
+      tbody.innerHTML = subjects.map((s, i) => `<tr><td>${i+1}</td><td>${s.subject}</td><td>${fmt(s.avg_marks)}</td></tr>`).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data available. Add marks first.</td></tr>';
+    }
+  } catch(e) {
+    console.warn('Performance load error:', e);
+  }
+
+  // Load student performance from marks
+  try {
+    const marks = await apiFetch('/api/marks/?limit=2000');
+    // Group by student
+    const byStudent = {};
+    marks.forEach(m => {
+      if (m.marks === null) return;
+      if (!byStudent[m.student_id]) byStudent[m.student_id] = {marks: [], id: m.student_id};
+      byStudent[m.student_id].marks.push(m.marks);
+    });
+
+    // Compute categories
+    const allMarks = marks.filter(m => m.marks !== null).map(m => m.marks);
+    const mean = allMarks.reduce((a,b)=>a+b,0) / (allMarks.length || 1);
+    const std = Math.sqrt(allMarks.reduce((a,b)=>a+(b-mean)**2,0) / (allMarks.length || 1));
+    let exc=0, good=0, avg=0, below=0;
+    const atRisk = [];
+
+    Object.values(byStudent).forEach(s => {
+      const smean = s.marks.reduce((a,b)=>a+b,0) / s.marks.length;
+      const z = std > 0 ? (smean - mean) / std : 0;
+      if (z >= 1) exc++;
+      else if (z >= 0) good++;
+      else if (z >= -1) avg++;
+      else { below++; atRisk.push({...s, avg: smean, z}); }
+    });
+
+    document.getElementById('perf-excellent').textContent = exc;
+    document.getElementById('perf-good').textContent = good;
+    document.getElementById('perf-average').textContent = avg;
+    document.getElementById('perf-below').textContent = below;
+
+    const riskBody = document.getElementById('at-risk-tbody');
+    if (atRisk.length) {
+      // We need student details — fetch them
+      const students = await apiFetch('/api/students/');
+      const stuMap = {};
+      students.forEach(s => stuMap[s.id] = s);
+      riskBody.innerHTML = atRisk.map(r => {
+        const stu = stuMap[r.id] || {};
+        return `<tr>
+          <td><code>${stu.student_id || r.id}</code></td>
+          <td>${stu.name || '—'}</td>
+          <td>${stu.department || '—'}</td>
+          <td>${fmt(r.avg)}</td>
+          <td><span class="badge badge-below">Below Average</span></td>
+        </tr>`;
+      }).join('');
+    } else {
+      riskBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No at-risk students detected.</td></tr>';
+    }
+  } catch(e) {
+    console.warn('Student perf load error:', e);
+  }
+}
+loadPerformance();
+</script>
+{% endblock %}

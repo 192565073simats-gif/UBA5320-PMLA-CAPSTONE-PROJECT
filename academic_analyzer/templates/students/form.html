@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Add Student — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-user-plus me-2 text-primary-custom"></i>Add New Student</h4>
+  <a href="/students" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="form-card">
+      <div id="form-alert"></div>
+      <form id="student-form" novalidate>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Student ID <span class="text-danger">*</span></label>
+            <input type="text" id="student_id" class="form-control" placeholder="e.g. CS2024001" required>
+            <div class="invalid-feedback">Student ID is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input type="text" id="name" class="form-control" placeholder="Student full name" required>
+            <div class="invalid-feedback">Name is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Department <span class="text-danger">*</span></label>
+            <select id="department" class="form-select" required>
+              <option value="">Select Department</option>
+              <option>Computer Science</option><option>Electronics</option>
+              <option>Mechanical</option><option>Civil</option><option>Mathematics</option>
+            </select>
+            <div class="invalid-feedback">Select a department.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email (optional)</label>
+            <input type="email" id="email" class="form-control" placeholder="student@college.edu">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Year <span class="text-danger">*</span></label>
+            <select id="year" class="form-select" required>
+              <option value="">Select Year</option>
+              <option value="1">1st Year</option><option value="2">2nd Year</option>
+              <option value="3">3rd Year</option><option value="4">4th Year</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Semester <span class="text-danger">*</span></label>
+            <select id="semester" class="form-select" required>
+              <option value="">Select Semester</option>
+              {% for i in range(1,9) %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="/students" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Add Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('student-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const payload = {
+    student_id: document.getElementById('student_id').value.trim(),
+    name: document.getElementById('name').value.trim(),
+    department: document.getElementById('department').value,
+    year: parseInt(document.getElementById('year').value),
+    semester: parseInt(document.getElementById('semester').value),
+    email: document.getElementById('email').value.trim() || null,
+  };
+  if (!payload.student_id || !payload.name || !payload.department || !payload.year || !payload.semester) {
+    showAlert('form-alert', 'Please fill all required fields.', 'danger'); return;
+  }
+  try {
+    showLoading();
+    await apiFetch('/api/students/', { method: 'POST', body: JSON.stringify(payload) });
+    hideLoading();
+    showMessage('Student added successfully!', 'success');
+    setTimeout(() => window.location.href = '/students', 1000);
+  } catch(err) {
+    hideLoading();
+    showAlert('form-alert', err.message, 'danger');
+  }
+});
+
+function showAlert(id, msg, type) {
+  document.getElementById(id).innerHTML = `<div class="alert alert-${type} alert-dismissible"><button type="button" class="btn-close" data-bs-dismiss="alert"></button>${msg}</div>`;
+}
+</script>
+{% endblock %}

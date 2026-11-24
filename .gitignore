@@ -1,0 +1,15 @@
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.vscode/
+uploads/*
+academic_analyzer/reports/*
+!uploads/.gitkeep
+!academic_analyzer/reports/.gitkeep

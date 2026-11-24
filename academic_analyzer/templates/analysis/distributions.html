@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}Probability Distributions — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-wave-square me-2 text-primary-custom"></i>Probability Distribution Analysis</h4>
+</div>
+
+<!-- Controls -->
+<div class="form-card mb-4">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label mb-1">Subject</label>
+      <select id="dist-subject-select" class="form-select"></select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Assessment Type</label>
+      <select id="dist-type-select" class="form-select">
+        <option value="">All</option>
+        <option value="internal">Internal</option>
+        <option value="exam">Exam</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Pass Mark Threshold</label>
+      <input type="number" id="pass-threshold-input" class="form-control" value="40" min="0" max="100" step="1">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100" onclick="runDistributionAnalysis()">
+        <i class="fas fa-chart-line me-1"></i>Analyze
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Results Container -->
+<div id="dist-results-section" class="d-none">
+  <!-- Section 1: Normal Distribution -->
+  <h5 class="section-title"><i class="fas fa-bell me-2"></i>1. Normal Distribution Analysis</h5>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4">
+      <div class="form-card h-100">
+        <h6 class="fw-bold mb-3"><i class="fas fa-vial me-2 text-primary"></i>Normality Test</h6>
+        <div id="normality-test-badge" class="mb-3"></div>
+        <table class="table table-sm table-borderless">
+          <tbody>
+            <tr><td class="text-muted">Test Used:</td><td class="fw-semibold" id="nt-name">—</td></tr>
+            <tr><td class="text-muted">Test Statistic:</td><td class="fw-semibold" id="nt-stat">—</td></tr>
+            <tr><td class="text-muted">p-value:</td><td class="fw-semibold" id="nt-p">—</td></tr>
+            <tr><td class="text-muted">Significance Level (α):</td><td class="fw-semibold">0.05 (95% Conf.)</td></tr>
+            <tr><td class="text-muted">Fitted Mean (μ):</td><td class="fw-semibold" id="nf-mu">—</td></tr>
+            <tr><td class="text-muted">Fitted Std Dev (σ):</td><td class="fw-semibold" id="nf-sigma">—</td></tr>
+            <tr><td class="text-muted">KS Goodness-of-Fit:</td><td class="fw-semibold" id="nf-ks">—</td></tr>
+          </tbody>
+        </table>
+        <div class="alert alert-light border small text-muted mb-0" id="nt-interp"></div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="chart-card">
+        <div class="chart-title"><i class="fas fa-chart-area"></i> Fitted Normal Bell Curve vs. Actual Marks</div>
+        <div id="chart-normal-curve" style="min-height:340px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Normal Distribution Interactive Probability Calculator -->
+  <div class="form-card mb-4">
+    <h6 class="fw-bold mb-3"><i class="fas fa-calculator me-2 text-primary"></i>Interactive Normal Probability Calculator</h6>
+    <div class="row g-3 align-items-center">
+      <div class="col-md-3">
+        <label class="form-label mb-1">Enter Mark (X):</label>
+        <input type="number" id="calc-mark-input" class="form-control" placeholder="e.g. 60" step="1">
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-outline-primary mt-md-4 w-100" onclick="calculateProbabilities()">
+          Compute Probability
+        </button>
+      </div>
+      <div class="col-md-6">
+        <div class="p-2 border rounded bg-light" id="calc-prob-output">
+          <small class="text-muted">Enter a mark and click Compute to evaluate $P(X \le x)$ and $P(X \ge x)$ using the fitted Gaussian model.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Binomial Distribution -->
+  <h5 class="section-title"><i class="fas fa-percentage me-2"></i>2. Binomial Pass/Fail Model</h5>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4">
+      <div class="form-card h-100">
+        <h6 class="fw-bold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>Model Parameters</h6>
+        <table class="table table-sm table-borderless">
+          <tbody>
+            <tr><td class="text-muted">Trials (n):</td><td class="fw-semibold" id="binom-n">—</td></tr>
+            <tr><td class="text-muted">Pass Threshold:</td><td class="fw-semibold" id="binom-thresh">—</td></tr>
+            <tr><td class="text-muted">Students Passed:</td><td class="fw-semibold text-success" id="binom-passed">—</td></tr>
+            <tr><td class="text-muted">Students Failed:</td><td class="fw-semibold text-danger" id="binom-failed">—</td></tr>
+            <tr><td class="text-muted">Empirical p:</td><td class="fw-semibold" id="binom-p">—</td></tr>
+            <tr><td class="text-muted">Expected Passes E(X):</td><td class="fw-semibold" id="binom-exp">—</td></tr>
+            <tr><td class="text-muted">Binomial Variance:</td><td class="fw-semibold" id="binom-var">—</td></tr>
+            <tr><td class="text-muted">P(Majority Pass):</td><td class="fw-semibold" id="binom-maj">—</td></tr>
+          </tbody>
+        </table>
+        <div class="alert alert-info py-2 small mb-0">
+          <strong>Binomial Assumptions:</strong>
+          <ul class="mb-0 ps-3">
+            <li>Fixed number of student trials (n).</li>
+            <li>Two mutually exclusive outcomes: Pass or Fail.</li>
+            <li>Constant probability of passing (p).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="chart-card">
+        <div class="chart-title"><i class="fas fa-chart-bar"></i> Binomial Probability Mass Function (PMF)</div>
+        <div id="chart-binom-pmf" style="min-height:340px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Student Z-Scores and Relative Standing -->
+  <h5 class="section-title"><i class="fas fa-sort-amount-down me-2"></i>3. Standardized Z-Scores & Relative Standing</h5>
+  <div class="table-card mb-4">
+    <div class="table-header">
+      <span>Student Z-Score Distribution (Standard Deviations from Mean)</span>
+    </div>
+    <div class="table-responsive" style="max-height:360px; overflow-y:auto;">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Mark</th>
+            <th>Z-Score</th>
+            <th>Performance Tier</th>
+          </tr>
+        </thead>
+        <tbody id="dist-zscore-tbody">
+          <tr><td colspan="5" class="text-center py-3 text-muted">No data.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="dist-no-data" class="text-center text-muted py-5">
+  <i class="fas fa-wave-square fa-3x mb-3 text-primary-custom"></i>
+  <p>Select a subject and click <strong>Analyze</strong> to examine Normal and Binomial probability distributions.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentDistData = null;
+
+populateSubjectDropdown('dist-subject-select', false);
+
+async function runDistributionAnalysis() {
+  const subjectId = document.getElementById('dist-subject-select').value;
+  const aType = document.getElementById('dist-type-select').value;
+  const thresh = document.getElementById('pass-threshold-input').value || 40;
+  if (!subjectId) {
+    showMessage('Please select a subject.', 'warning');
+    return;
+  }
+
+  showLoading();
+  try {
+    let url = `/api/analysis/distribution/${subjectId}?pass_threshold=${thresh}`;
+    if (aType) url += `&assessment_type=${aType}`;
+    const data = await apiFetch(url);
+    hideLoading();
+    currentDistData = data;
+    displayDistributionResults(data);
+  } catch(e) {
+    hideLoading();
+    showMessage(e.message, 'danger');
+  }
+}
+
+function displayDistributionResults(data) {
+  document.getElementById('dist-no-data').classList.add('d-none');
+  document.getElementById('dist-results-section').classList.remove('d-none');
+
+  // Normality Test
+  const nt = data.normality_test || {};
+  const isNorm = nt.is_normal;
+  document.getElementById('normality-test-badge').innerHTML = isNorm
+    ? '<span class="badge bg-success p-2 fs-6"><i class="fas fa-check-circle me-1"></i>Follows Normal Distribution</span>'
+    : '<span class="badge bg-warning text-dark p-2 fs-6"><i class="fas fa-exclamation-circle me-1"></i>Does NOT Follow Normal Distribution</span>';
+
+  document.getElementById('nt-name').textContent = nt.test_name || 'N/A';
+  document.getElementById('nt-stat').textContent = fmt(nt.statistic, 4);
+  document.getElementById('nt-p').textContent = fmt(nt.p_value, 4);
+  document.getElementById('nt-interp').textContent = nt.interpretation || 'No interpretation.';
+
+  const nf = data.normal_fit || {};
+  document.getElementById('nf-mu').textContent = fmt(nf.mean, 2);
+  document.getElementById('nf-sigma').textContent = fmt(nf.std, 2);
+  document.getElementById('nf-ks').textContent = fmt(nf.fit_quality, 4);
+
+  // Normal Curve Chart
+  if (nf.pdf_x && nf.pdf_x.length > 0) {
+    const tracePdf = {
+      x: nf.pdf_x,
+      y: nf.pdf_y,
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Fitted Normal Curve',
+      line: { color: '#1a73e8', width: 3 }
+    };
+
+    // Actual marks rug/points
+    const zList = data.student_zscores || [];
+    const actualMarks = zList.map(s => s.marks);
+
+    const traceHist = {
+      x: actualMarks,
+      type: 'histogram',
+      histnorm: 'probability density',
+      name: 'Observed Marks Density',
+      opacity: 0.45,
+      marker: { color: '#34a853' }
+    };
+
+    Plotly.newPlot('chart-normal-curve', [traceHist, tracePdf], {
+      title: `${data.subject_name} — Observed Marks vs. Fitted Normal Curve`,
+      xaxis: { title: 'Marks' },
+      yaxis: { title: 'Probability Density' },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 40, r: 20, b: 50, l: 50 },
+      legend: { orientation: 'h', y: -0.2 }
+    }, { responsive: true, displaylogo: false });
+  }
+
+  // Binomial Data
+  const b = data.binomial_analysis || {};
+  document.getElementById('binom-n').textContent = b.n ?? 'N/A';
+  document.getElementById('binom-thresh').textContent = (b.pass_threshold ?? 40) + ' marks';
+  document.getElementById('binom-passed').textContent = b.pass_count ?? 'N/A';
+  document.getElementById('binom-failed').textContent = b.fail_count ?? 'N/A';
+  document.getElementById('binom-p').textContent = fmt(b.p_empirical, 3);
+  document.getElementById('binom-exp').textContent = fmt(b.expected_passes, 1);
+  document.getElementById('binom-var').textContent = fmt(b.binomial_variance, 2);
+  document.getElementById('binom-maj').textContent = b.p_majority_pass != null ? fmtPct(b.p_majority_pass * 100) : 'N/A';
+
+  // Binomial PMF Chart
+  if (b.pmf_k && b.pmf_k.length > 0) {
+    Plotly.newPlot('chart-binom-pmf', [{
+      x: b.pmf_k.map(k => `k=${k}`),
+      y: b.pmf_prob,
+      type: 'bar',
+      marker: { color: '#0d47a1' }
+    }], {
+      title: `Binomial PMF: Probability of Exactly k Passes out of ${b.n}`,
+      xaxis: { title: 'Number of Passes (k)' },
+      yaxis: { title: 'Probability P(X = k)' },
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 40, r: 20, b: 50, l: 50 }
+    }, { responsive: true, displaylogo: false });
+  }
+
+  // Z-scores Table
+  const zBody = document.getElementById('dist-zscore-tbody');
+  const zList = data.student_zscores || [];
+  if (!zList.length) {
+    zBody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No student assessments found.</td></tr>';
+  } else {
+    zBody.innerHTML = zList.map(s => {
+      let badge = 'bg-secondary';
+      let tier = 'Average';
+      if (s.z_score >= 1.0) { badge = 'bg-success'; tier = 'High Achiever (z ≥ 1.0)'; }
+      else if (s.z_score >= 0.0) { badge = 'bg-primary'; tier = 'Above Average (0 ≤ z < 1.0)'; }
+      else if (s.z_score >= -1.0) { badge = 'bg-warning text-dark'; tier = 'Below Average (-1.0 ≤ z < 0)'; }
+      else { badge = 'bg-danger'; tier = 'Academic Support Recommended (z < -1.0)'; }
+
+      return `<tr>
+        <td><code>${escHtml(s.student_id)}</code></td>
+        <td><strong>${escHtml(s.name)}</strong></td>
+        <td>${fmt(s.marks)}</td>
+        <td><span class="badge ${s.z_score < 0 ? 'bg-warning text-dark' : 'bg-info text-dark'}">${s.z_score >= 0 ? '+' : ''}${fmt(s.z_score)}</span></td>
+        <td><span class="badge ${badge}">${tier}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function calculateProbabilities() {
+  if (!currentDistData || !currentDistData.normal_fit) {
+    showMessage('Run distribution analysis first.', 'warning');
+    return;
+  }
+  const val = parseFloat(document.getElementById('calc-mark-input').value);
+  if (isNaN(val)) {
+    showMessage('Enter a valid numerical mark.', 'warning');
+    return;
+  }
+  const mu = currentDistData.normal_fit.mean;
+  const sigma = currentDistData.normal_fit.std;
+  if (!sigma || sigma <= 0) {
+    showMessage('Invalid standard deviation in fitted model.', 'danger');
+    return;
+  }
+
+  // Standard normal CDF approximation (erf-based)
+  const z = (val - mu) / sigma;
+  const pLess = 0.5 * (1 + erf(z / Math.SQRT2));
+  const pGreater = 1 - pLess;
+
+  document.getElementById('calc-prob-output').innerHTML = `
+    <div class="row g-2 text-dark">
+      <div class="col-6"><strong>Z-Score:</strong> ${z >= 0 ? '+' : ''}${fmt(z, 2)}</div>
+      <div class="col-6"><strong>P(Marks ≤ ${val}):</strong> ${(pLess * 100).toFixed(2)}%</div>
+      <div class="col-6"><strong>P(Marks ≥ ${val}):</strong> ${(pGreater * 100).toFixed(2)}%</div>
+      <div class="col-6 text-muted small">Evaluated on N(μ=${fmt(mu, 2)}, σ=${fmt(sigma, 2)})</div>
+    </div>`;
+}
+
+// Error function approximation for Gaussian CDF
+function erf(x) {
+  const sign = x >= 0 ? 1 : -1;
+  x = Math.abs(x);
+  const a1 =  0.254829592, a2 = -0.284496736, a3 =  1.421413741;
+  const a4 = -1.453152027, a5 =  1.061405429, p  =  0.3275911;
+  const t = 1.0 / (1.0 + p * x);
+  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return sign * y;
+}
+</script>
+{% endblock %}

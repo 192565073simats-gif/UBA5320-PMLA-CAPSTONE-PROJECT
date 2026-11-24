@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Upload Data — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-file-upload me-2 text-primary-custom"></i>Upload Student Marks</h4>
+  <a href="/marks" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back to Marks</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="form-card">
+      <h6 class="section-title">Upload CSV or Excel File</h6>
+      <div id="upload-alert"></div>
+
+      <!-- Drop Zone -->
+      <div class="upload-zone mb-3" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-cloud-upload-alt d-block"></i>
+        <p class="mb-1"><strong>Click or drag & drop</strong> a CSV or Excel file here</p>
+        <p class="small text-muted mb-0">Supported formats: .csv, .xlsx, .xls</p>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="d-none">
+
+      <div id="file-info" class="d-none alert alert-info py-2">
+        <i class="fas fa-file me-1"></i><span id="file-name"></span>
+        <button class="btn btn-sm btn-link text-danger float-end py-0" onclick="clearFile()">Remove</button>
+      </div>
+
+      <button class="btn btn-primary w-100" id="uploadBtn" onclick="uploadFile()" disabled>
+        <i class="fas fa-upload me-1"></i>Upload and Process
+      </button>
+
+      <!-- Results -->
+      <div id="upload-results" class="d-none mt-4">
+        <h6 class="section-title">Upload Results</h6>
+        <div class="row g-2 mb-3">
+          <div class="col-6"><div class="stat-card green py-2 text-center"><div class="stat-value" id="res-success">0</div><div class="stat-label">Imported</div></div></div>
+          <div class="col-6"><div class="stat-card red py-2 text-center"><div class="stat-value" id="res-errors">0</div><div class="stat-label">Errors</div></div></div>
+        </div>
+        <div id="error-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="form-card">
+      <h6 class="section-title">Expected CSV Format</h6>
+      <p class="small text-muted">Your CSV file must have these columns:</p>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+          <thead><tr><th>Column</th><th>Required</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td><code>student_id</code></td><td>Yes</td><td>CS2024001</td></tr>
+            <tr><td><code>subject_code</code></td><td>Yes</td><td>CS301</td></tr>
+            <tr><td><code>assessment_type</code></td><td>Yes</td><td>internal / exam</td></tr>
+            <tr><td><code>marks</code></td><td>No</td><td>78.5 (blank = missing)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-info py-2 small">
+        <i class="fas fa-info-circle me-1"></i>Students and subjects must already exist in the system before uploading marks.
+      </div>
+      <a href="/static/sample_template.csv" class="btn btn-outline-primary btn-sm w-100" download>
+        <i class="fas fa-download me-1"></i>Download Template CSV
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedFile = null;
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); }));
+dropZone.addEventListener('drop', e => { if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if(e.target.files.length) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['csv','xlsx','xls'].includes(ext)) { showMessage('Invalid file type. Use CSV or Excel.','danger'); return; }
+  selectedFile = file;
+  document.getElementById('file-name').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+  document.getElementById('file-info').classList.remove('d-none');
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+function clearFile() {
+  selectedFile = null; fileInput.value = '';
+  document.getElementById('file-info').classList.add('d-none');
+  document.getElementById('uploadBtn').disabled = true;
+}
+
+async function uploadFile() {
+  if (!selectedFile) return;
+  const ext = selectedFile.name.split('.').pop().toLowerCase();
+  const url = ext === 'csv' ? '/api/marks/upload-csv' : '/api/marks/upload-excel';
+  const form = new FormData();
+  form.append('file', selectedFile);
+  try {
+    showLoading();
+    const res = await apiFetch(url, {method:'POST', body: form, isForm: true});
+    hideLoading();
+    document.getElementById('upload-results').classList.remove('d-none');
+    document.getElementById('res-success').textContent = res.success_count || 0;
+    document.getElementById('res-errors').textContent = res.error_count || 0;
+    if (res.errors && res.errors.length) {
+      document.getElementById('error-list').innerHTML = '<div class="alert alert-warning small py-2"><strong>Errors:</strong><ul class="mb-0 mt-1">' +
+        res.errors.map(e => `<li>${escHtml(e)}</li>`).join('') + '</ul></div>';
+    }
+    showMessage(`Imported ${res.success_count || 0} records.`, 'success');
+  } catch(e) {
+    hideLoading();
+    document.getElementById('upload-alert').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+}
+</script>
+{% endblock %}

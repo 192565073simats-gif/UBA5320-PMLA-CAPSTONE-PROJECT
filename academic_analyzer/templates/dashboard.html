@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-tachometer-alt me-2 text-primary-custom"></i>Dashboard</h4>
+  <span class="text-muted small" id="last-updated"></span>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4" id="stat-cards">
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div>
+          <div class="stat-value" id="total-students">—</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon"><i class="fas fa-book"></i></div>
+        <div>
+          <div class="stat-value" id="total-subjects">—</div>
+          <div class="stat-label">Total Subjects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card green">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon" style="background:#e6f4ea;color:#34a853"><i class="fas fa-chart-line"></i></div>
+        <div>
+          <div class="stat-value" id="class-average">—</div>
+          <div class="stat-label">Class Average</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon"><i class="fas fa-sort-numeric-up"></i></div>
+        <div>
+          <div class="stat-value" id="median-marks">—</div>
+          <div class="stat-label">Median Marks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card orange">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon" style="background:#fef3cd;color:#856404"><i class="fas fa-wave-square"></i></div>
+        <div>
+          <div class="stat-value" id="std-deviation">—</div>
+          <div class="stat-label">Std Deviation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card green">
+      <div class="d-flex align-items-start gap-3">
+        <div class="stat-icon" style="background:#e6f4ea;color:#34a853"><i class="fas fa-check-circle"></i></div>
+        <div>
+          <div class="stat-value" id="pass-pct">—</div>
+          <div class="stat-label">Pass %</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-7">
+    <div class="chart-card">
+      <div class="chart-title"><i class="fas fa-bar-chart"></i> Subject-wise Average Marks</div>
+      <div id="chart-subject-avg" style="min-height:280px"><div class="chart-placeholder"><span><i class="fas fa-spinner fa-spin me-2"></i>Loading chart…</span></div></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="chart-card">
+      <div class="chart-title"><i class="fas fa-pie-chart"></i> Performance Distribution</div>
+      <div id="chart-category-pie" style="min-height:280px"><div class="chart-placeholder"><span><i class="fas fa-spinner fa-spin me-2"></i>Loading chart…</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title"><i class="fas fa-chart-area"></i> Marks Distribution (All Subjects)</div>
+      <div id="chart-distribution" style="min-height:260px"><div class="chart-placeholder"><span><i class="fas fa-spinner fa-spin me-2"></i>Loading chart…</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- At-Risk Students -->
+<div class="table-card mb-4">
+  <div class="table-header">
+    <span><i class="fas fa-exclamation-triangle text-warning me-2"></i>Students Flagged for Review</span>
+    <a href="/performance" class="btn btn-sm btn-outline-primary">View All</a>
+  </div>
+  <div class="at-risk-banner mx-3 mt-3">
+    <i class="fas fa-info-circle me-1"></i>
+    These students may benefit from additional academic support. This list is for teacher review only and is based on statistical analysis.
+  </div>
+  <div class="table-responsive px-3 pb-3">
+    <table class="table table-hover mb-0" id="at-risk-table">
+      <thead><tr><th>Student ID</th><th>Name</th><th>Subject</th><th>Marks</th><th>Z-Score</th><th>Category</th></tr></thead>
+      <tbody id="at-risk-body"><tr><td colspan="6" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+async function loadDashboard() {
+  try {
+    const stats = await apiFetch('/api/dashboard/summary');
+    document.getElementById('total-students').textContent = stats.total_students ?? '0';
+    document.getElementById('total-subjects').textContent = stats.total_subjects ?? '0';
+    // class_average and other stats computed on client from marks
+    const topSubs = stats.top_subjects_by_avg || [];
+    if (topSubs.length) {
+      const avg = topSubs.reduce((s,x) => s + x.avg_marks, 0) / topSubs.length;
+      document.getElementById('class-average').textContent = fmt(avg);
+    }
+    document.getElementById('median-marks').textContent = '—';
+    document.getElementById('std-deviation').textContent = '—';
+    document.getElementById('pass-pct').textContent = '—';
+
+    // Compute live stats from actual marks
+    try {
+      const allMarks = await apiFetch('/api/marks/?limit=5000');
+      const vals = allMarks.filter(m => m.marks !== null).map(m => m.marks);
+      if (vals.length) {
+        const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+        const sorted = [...vals].sort((a,b)=>a-b);
+        const median = sorted.length%2 ? sorted[Math.floor(sorted.length/2)] : (sorted[sorted.length/2-1]+sorted[sorted.length/2])/2;
+        const std = Math.sqrt(vals.reduce((a,v)=>a+(v-mean)**2,0)/vals.length);
+        const passCount = vals.filter(v=>v>=40).length;
+        document.getElementById('class-average').textContent = fmt(mean);
+        document.getElementById('median-marks').textContent = fmt(median);
+        document.getElementById('std-deviation').textContent = fmt(std);
+        document.getElementById('pass-pct').textContent = fmt(passCount/vals.length*100) + '%';
+
+        // Build charts from real data
+        // Subject averages bar
+        const subjectMap = {};
+        allMarks.filter(m=>m.marks!==null).forEach(m => {
+          if(!subjectMap[m.subject_id]) subjectMap[m.subject_id] = {total:0,count:0};
+          subjectMap[m.subject_id].total += m.marks;
+          subjectMap[m.subject_id].count++;
+        });
+        const subIds = Object.keys(subjectMap);
+        Plotly.newPlot('chart-subject-avg', [{
+          x: subIds.map(s => 'Subject '+s),
+          y: subIds.map(s => subjectMap[s].total/subjectMap[s].count),
+          type:'bar', marker:{color:'#1a73e8'}
+        }], {title:'Subject Averages',xaxis:{title:''},yaxis:{title:'Avg Marks'},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',margin:{t:40,r:20,b:50,l:50}}, {responsive:true,displaylogo:false});
+
+        // Pie chart
+        const cats = {Excellent:0,Good:0,Average:0,'Below Average':0};
+        vals.forEach(v => {
+          const z = (v-mean)/std;
+          if(z>=1) cats.Excellent++;
+          else if(z>=0) cats.Good++;
+          else if(z>=-1) cats.Average++;
+          else cats['Below Average']++;
+        });
+        Plotly.newPlot('chart-category-pie', [{
+          labels:Object.keys(cats), values:Object.values(cats), type:'pie',
+          marker:{colors:['#34a853','#1a73e8','#fbbc04','#ea4335']},
+          hole:0.4
+        }], {title:'Performance Categories',paper_bgcolor:'rgba(0,0,0,0)',margin:{t:40,r:20,b:30,l:20}}, {responsive:true,displaylogo:false});
+
+        // Histogram
+        Plotly.newPlot('chart-distribution', [{x:vals,type:'histogram',marker:{color:'#1a73e8'},nbinsx:15}],
+          {title:'Marks Distribution',xaxis:{title:'Marks'},yaxis:{title:'Count'},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',margin:{t:40,r:20,b:50,l:50}}, {responsive:true,displaylogo:false});
+      }
+    } catch(ce) { console.warn('Chart data load:', ce); }
+  } catch(e) { console.warn('Stats load failed', e); }
+
+  // Charts are built above from real marks data
+
+  // At-risk table
+  try {
+    // Compute at-risk from marks loaded above
+    const allMarksAR = await apiFetch('/api/marks/?limit=5000');
+    const valsAR = allMarksAR.filter(m => m.marks !== null).map(m => m.marks);
+    const meanAR = valsAR.length ? valsAR.reduce((a,b)=>a+b,0)/valsAR.length : 0;
+    const stdAR = valsAR.length ? Math.sqrt(valsAR.reduce((a,v)=>a+(v-meanAR)**2,0)/valsAR.length) : 1;
+    const arStudents = allMarksAR.filter(m => m.marks !== null && stdAR > 0 && (m.marks - meanAR)/stdAR < -1.5)
+      .map(m => ({student_code: m.student_id, name: '', subject_name: 'Sub '+m.subject_id, marks: m.marks, z_score: ((m.marks-meanAR)/stdAR), category: 'Below Average'}));
+    const ar = {students: arStudents.slice(0, 10)};
+    const tbody = document.getElementById('at-risk-body');
+    if (!ar.students || ar.students.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No at-risk students detected.</td></tr>';
+    } else {
+      tbody.innerHTML = ar.students.map(s => `
+        <tr>
+          <td>${s.student_code}</td>
+          <td>${s.name}</td>
+          <td>${s.subject_name}</td>
+          <td>${fmt(s.marks)}</td>
+          <td>${fmt(s.z_score)}</td>
+          <td><span class="badge badge-below rounded-pill">${s.category}</span></td>
+        </tr>`).join('');
+    }
+  } catch(e) {
+    document.getElementById('at-risk-body').innerHTML = '<tr><td colspan="6" class="text-center text-muted">Could not load data.</td></tr>';
+  }
+}
+
+async function loadChart(url, elementId) {
+  try {
+    const j = await apiFetch(url);
+    renderChart(elementId, typeof j === 'string' ? j : JSON.stringify(j));
+  } catch(e) {
+    document.getElementById(elementId).innerHTML = '<div class="chart-placeholder">Chart data unavailable.</div>';
+  }
+}
+
+loadDashboard();
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+student_id,student_name,department,year,semester,email
+CS2024001,Priya Sharma,Computer Science,3,5,priya.sharma@college.edu
+CS2024002,Rahul Kumar,Computer Science,3,5,rahul.kumar@college.edu
+CS2024003,Anjali Singh,Computer Science,2,3,anjali.singh@college.edu
+CS2024004,Vikram Patel,Computer Science,2,3,vikram.patel@college.edu
+CS2024005,Deepika Nair,Computer Science,4,7,deepika.nair@college.edu
+CS2024006,Arjun Mehta,Computer Science,1,1,arjun.mehta@college.edu
+CS2024007,Sneha Reddy,Computer Science,4,7,sneha.reddy@college.edu
+CS2024008,Karthik Iyer,Computer Science,3,5,karthik.iyer@college.edu
+CS2024009,Pooja Joshi,Computer Science,1,2,pooja.joshi@college.edu
+CS2024010,Amit Verma,Computer Science,2,4,amit.verma@college.edu
+EC2024001,Ramesh Gupta,Electronics,2,3,ramesh.gupta@college.edu
+EC2024002,Sunita Rao,Electronics,3,5,sunita.rao@college.edu
+EC2024003,Nikhil Desai,Electronics,1,1,nikhil.desai@college.edu
+EC2024004,Kavya Pillai,Electronics,4,7,kavya.pillai@college.edu
+EC2024005,Suresh Nambiar,Electronics,2,4,suresh.nambiar@college.edu
+EC2024006,Meena Krishnan,Electronics,3,6,meena.krishnan@college.edu
+EC2024007,Ravi Shankar,Electronics,1,2,ravi.shankar@college.edu
+EC2024008,Preethi Menon,Electronics,4,8,preethi.menon@college.edu
+EC2024009,Dinesh Babu,Electronics,2,3,dinesh.babu@college.edu
+EC2024010,Lakshmi Devi,Electronics,3,5,lakshmi.devi@college.edu
+ME2024001,Rohit Tiwari,Mechanical,3,5,rohit.tiwari@college.edu
+ME2024002,Swati Bhatt,Mechanical,2,3,swati.bhatt@college.edu
+ME2024003,Gaurav Pandey,Mechanical,4,7,gaurav.pandey@college.edu
+ME2024004,Anita Chauhan,Mechanical,1,1,anita.chauhan@college.edu
+ME2024005,Sunil Yadav,Mechanical,2,4,sunil.yadav@college.edu
+ME2024006,Nisha Agarwal,Mechanical,3,6,nisha.agarwal@college.edu
+ME2024007,Prakash Bose,Mechanical,4,8,prakash.bose@college.edu
+ME2024008,Rekha Saxena,Mechanical,1,2,rekha.saxena@college.edu
+ME2024009,Sanjay Mishra,Mechanical,2,3,sanjay.mishra@college.edu
+ME2024010,Usha Tripathi,Mechanical,3,5,usha.tripathi@college.edu
+CV2024001,Vinod Kapoor,Civil,2,4,vinod.kapoor@college.edu
+CV2024002,Meera Srivastava,Civil,3,5,meera.srivastava@college.edu
+CV2024003,Ashish Dwivedi,Civil,1,1,ashish.dwivedi@college.edu
+CV2024004,Puja Rajan,Civil,4,7,puja.rajan@college.edu
+CV2024005,Ajay Khanna,Civil,2,3,ajay.khanna@college.edu
+CV2024006,Shilpa Kulkarni,Civil,3,6,shilpa.kulkarni@college.edu
+CV2024007,Manoj Kumar,Civil,4,8,manoj.kumar@college.edu
+CV2024008,Divya Nath,Civil,1,2,divya.nath@college.edu
+CV2024009,Rajan Pillai,Civil,2,4,rajan.pillai@college.edu
+CV2024010,Hema Sundaram,Civil,3,5,hema.sundaram@college.edu
+MA2024001,Srinivas Murthy,Mathematics,2,3,srinivas.murthy@college.edu
+MA2024002,Chitra Balaji,Mathematics,3,5,chitra.balaji@college.edu
+MA2024003,Yogesh Jain,Mathematics,1,1,yogesh.jain@college.edu
+MA2024004,Fareeda Ansari,Mathematics,4,7,fareeda.ansari@college.edu
+MA2024005,Manish Goyal,Mathematics,2,4,manish.goyal@college.edu
+MA2024006,Kavitha Suresh,Mathematics,3,6,kavitha.suresh@college.edu
+MA2024007,Rahul Nene,Mathematics,4,8,rahul.nene@college.edu
+MA2024008,Tanvi Shah,Mathematics,1,2,tanvi.shah@college.edu
+MA2024009,Lokesh Hegde,Mathematics,2,3,lokesh.hegde@college.edu
+MA2024010,Priya Venkat,Mathematics,3,5,priya.venkat@college.edu

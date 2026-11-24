@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Marks Entry — Academic Performance Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-pen-to-square me-2 text-primary-custom"></i>Marks Entry</h4>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMarkModal"><i class="fas fa-plus me-1"></i>Add Mark</button>
+</div>
+
+<!-- Filters -->
+<div class="form-card mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label mb-1">Subject</label>
+      <select id="filter-subject" class="form-select"><option value="">All Subjects</option></select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Type</label>
+      <select id="filter-type" class="form-select">
+        <option value="">All</option><option value="internal">Internal</option><option value="exam">Exam</option>
+      </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="loadMarks()"><i class="fas fa-filter me-1"></i>Filter</button></div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <div class="table-header">
+    <span>Assessment Records <span class="badge bg-primary ms-2" id="marks-count">0</span></span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>#</th><th>Student ID</th><th>Subject</th><th>Type</th><th>Marks</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="marks-tbody"><tr><td colspan="7" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Mark Modal -->
+<div class="modal fade" id="addMarkModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Add Assessment Mark</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div id="modal-alert"></div>
+        <div class="mb-3"><label class="form-label">Student</label>
+          <select id="m-student" class="form-select"></select></div>
+        <div class="mb-3"><label class="form-label">Subject</label>
+          <select id="m-subject" class="form-select"></select></div>
+        <div class="mb-3"><label class="form-label">Assessment Type</label>
+          <select id="m-type" class="form-select"><option value="internal">Internal</option><option value="exam">Exam</option></select></div>
+        <div class="mb-3"><label class="form-label">Marks (leave blank if missing)</label>
+          <input type="number" id="m-marks" class="form-control" min="0" max="100" step="0.5"></div>
+        <div class="mb-3"><label class="form-label">Remarks</label>
+          <input type="text" id="m-remarks" class="form-control"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="submitMark()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDropdowns() {
+  try {
+    const students = await apiFetch('/api/students/');
+    const sel = document.getElementById('m-student');
+    sel.innerHTML = students.map(s => `<option value="${s.id}">${s.student_id} — ${s.name}</option>`).join('');
+  } catch(e) {}
+  await populateSubjectDropdown('filter-subject', true);
+  await populateSubjectDropdown('m-subject', false);
+}
+
+async function loadMarks() {
+  const subId = document.getElementById('filter-subject').value;
+  const type = document.getElementById('filter-type').value;
+  let url = '/api/marks/?limit=500';
+  if (subId) url += `&subject_id=${subId}`;
+  if (type) url += `&assessment_type=${type}`;
+  const tbody = document.getElementById('marks-tbody');
+  try {
+    const marks = await apiFetch(url);
+    document.getElementById('marks-count').textContent = marks.length;
+    if (!marks.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No marks found.</td></tr>'; return; }
+    tbody.innerHTML = marks.map((m, i) => `
+      <tr>
+        <td class="text-muted small">${i+1}</td>
+        <td><code>${m.student_id}</code></td>
+        <td>${m.subject_id}</td>
+        <td><span class="badge bg-${m.assessment_type==='exam'?'primary':'info'}">${m.assessment_type}</span></td>
+        <td>${m.marks !== null ? fmt(m.marks) : '—'}</td>
+        <td>${m.is_missing ? '<span class="badge badge-missing">Missing</span>' : '<span class="badge badge-good">Valid</span>'}</td>
+        <td><button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="confirmDelete('/api/marks/${m.id}', loadMarks)"><i class="fas fa-trash"></i></button></td>
+      </tr>`).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center">${e.message}</td></tr>`; }
+}
+
+async function submitMark() {
+  const marksVal = document.getElementById('m-marks').value;
+  const payload = {
+    student_id: parseInt(document.getElementById('m-student').value),
+    subject_id: parseInt(document.getElementById('m-subject').value),
+    assessment_type: document.getElementById('m-type').value,
+    marks: marksVal !== '' ? parseFloat(marksVal) : null,
+    remarks: document.getElementById('m-remarks').value || null,
+  };
+  try {
+    await apiFetch('/api/marks/', {method:'POST', body: JSON.stringify(payload)});
+    bootstrap.Modal.getInstance(document.getElementById('addMarkModal')).hide();
+    showMessage('Mark added!', 'success');
+    loadMarks();
+  } catch(e) {
+    document.getElementById('modal-alert').innerHTML = `<div class="alert alert-danger py-2">${e.message}</div>`;
+  }
+}
+
+loadDropdowns();
+loadMarks();
+</script>
+{% endblock %}

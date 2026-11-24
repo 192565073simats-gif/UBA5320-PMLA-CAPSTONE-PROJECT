@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ student_db_id }} — Student Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="fas fa-user me-2 text-primary-custom"></i>Student Details</h4>
+  <div class="d-flex gap-2">
+    <a href="/students" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <button class="btn btn-primary btn-sm" onclick="downloadCSV()"><i class="fas fa-file-csv me-1"></i>Download CSV</button>
+  </div>
+</div>
+
+<!-- Student Info -->
+<div class="form-card mb-4" id="student-info">
+  <div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading student details…</div>
+</div>
+
+<!-- Assessments Table -->
+<div class="table-card mb-4">
+  <div class="table-header"><span><i class="fas fa-clipboard-list me-2"></i>Assessment Records</span></div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Subject</th><th>Type</th><th>Marks</th><th>Status</th></tr></thead>
+      <tbody id="assessments-tbody"><tr><td colspan="4" class="text-center py-3">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Performance Chart -->
+<div class="chart-card"><div class="chart-title"><i class="fas fa-chart-bar"></i> Marks by Subject</div><div id="chart-student" style="min-height:280px"></div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const STUDENT_DB_ID = {{ student_db_id }};
+
+async function loadStudentDetail() {
+  try {
+    // Load student info
+    const student = await apiFetch(`/api/students/${STUDENT_DB_ID}`);
+    document.getElementById('student-info').innerHTML = `
+      <div class="row g-3">
+        <div class="col-md-2 text-center"><i class="fas fa-user-graduate fa-3x text-primary-custom"></i></div>
+        <div class="col-md-10">
+          <h5 class="mb-1">${student.name}</h5>
+          <p class="mb-1"><code>${student.student_id}</code> · ${student.department} · Year ${student.year}, Semester ${student.semester}</p>
+          <p class="text-muted small mb-0">${student.email || 'No email'} · Added ${new Date(student.created_at).toLocaleDateString()}</p>
+        </div>
+      </div>`;
+
+    // Load assessments
+    const marks = await apiFetch(`/api/marks/?student_id=${STUDENT_DB_ID}&limit=200`);
+    const tbody = document.getElementById('assessments-tbody');
+    if (!marks.length) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No assessments yet.</td></tr>'; return; }
+    tbody.innerHTML = marks.map(m => `
+      <tr>
+        <td>${m.subject_id}</td>
+        <td><span class="badge bg-${m.assessment_type==='exam'?'primary':'info'}">${m.assessment_type}</span></td>
+        <td>${m.marks !== null ? fmt(m.marks) : '—'}</td>
+        <td>${m.is_missing ? '<span class="badge badge-missing">Missing</span>' : '<span class="badge badge-good">Valid</span>'}</td>
+      </tr>`).join('');
+
+    // Chart
+    const validMarks = marks.filter(m => m.marks !== null);
+    if (validMarks.length) {
+      Plotly.newPlot('chart-student', [{
+        x: validMarks.map((m,i) => `Sub ${m.subject_id} (${m.assessment_type})`),
+        y: validMarks.map(m => m.marks),
+        type: 'bar', marker: {color: '#1a73e8'}
+      }], {
+        title: 'Marks by Subject', xaxis: {title: ''}, yaxis: {title: 'Marks'},
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: {t:40,r:20,b:80,l:50}
+      }, {responsive: true, displaylogo: false});
+    }
+  } catch(e) {
+    document.getElementById('student-info').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+}
+
+async function downloadCSV() {
+  try {
+    const data = await apiFetch(`/api/analysis/student/${STUDENT_DB_ID}`);
+    let csv = 'Subject,Marks,Average\n';
+    (data.subjects||[]).forEach(s => s.marks.forEach(m => csv += `"${s.subject_name}",${m},${s.average}\n`));
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `student_${STUDENT_DB_ID}_report.csv`; a.click();
+  } catch(e) { showMessage(e.message, 'danger'); }
+}
+
+loadStudentDetail();
+</script>
+{% endblock %}
